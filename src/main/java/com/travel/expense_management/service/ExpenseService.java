@@ -17,4 +17,12 @@ public interface ExpenseService {
     ExpenseResponse updateExpense(Long id, ExpenseRequest request, UserPrincipal currentUser);
 
     void deleteExpense(Long id, UserPrincipal currentUser);
+
+    ExpenseResponse uploadReceipt(Long expenseId, org.springframework.web.multipart.MultipartFile file, UserPrincipal currentUser);
+
+    byte[] getReceiptFile(Long expenseId, UserPrincipal currentUser);
+
+    String getReceiptContentType(Long expenseId, UserPrincipal currentUser);
+
+    ExpenseResponse deleteReceipt(Long expenseId, UserPrincipal currentUser);
 }
