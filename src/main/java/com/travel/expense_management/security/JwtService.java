@@ -4,7 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -16,10 +16,10 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${security.jwt.secret}")
+    @org.springframework.beans.factory.annotation.Value("${security.jwt.secret}")
     private String secret;
 
-    @Value("${security.jwt.expiration}")
+    @org.springframework.beans.factory.annotation.Value("${security.jwt.expiration}")
     private Long expiration;
 
     public String generateToken(UserPrincipal user){

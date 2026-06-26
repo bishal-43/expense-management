@@ -123,6 +123,29 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(
+            BadRequestException.class
+    )
+    public ResponseEntity<ErrorResponse>
+    handleBadRequest(
+            BadRequestException ex,
+            HttpServletRequest request
+    ) {
+
+        return ResponseEntity
+                .status(
+                        HttpStatus.BAD_REQUEST
+                )
+                .body(
+                        ErrorResponse.of(
+                                400,
+                                "Bad Request",
+                                ex.getMessage(),
+                                request.getRequestURI()
+                        )
+                );
+    }
+
+    @ExceptionHandler(
             ConstraintViolationException.class
     )
     public ResponseEntity<ErrorResponse>
