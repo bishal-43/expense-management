@@ -17,4 +17,8 @@ public interface TripService {
     TripResponse updateTrip(Long id, TripRequest request, UserPrincipal currentUser);
 
     void deleteTrip(Long id, UserPrincipal currentUser);
+
+    TripResponse approveTrip(Long id, UserPrincipal currentUser);
+
+    TripResponse rejectTrip(Long id, UserPrincipal currentUser);
 }

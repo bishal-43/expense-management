@@ -8,4 +8,6 @@ public interface AuthorizationService {
     void authorizeTripAccess(Trip trip, UserPrincipal currentUser);
 
     void authorizeUserAccess(Long userId, UserPrincipal currentUser);
+
+    void authorizeTripApproval(UserPrincipal currentUser);
 }

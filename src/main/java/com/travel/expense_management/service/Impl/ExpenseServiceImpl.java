@@ -4,6 +4,7 @@ import com.travel.expense_management.dto.expense.ExpenseRequest;
 import com.travel.expense_management.dto.expense.ExpenseResponse;
 import com.travel.expense_management.entity.Expense;
 import com.travel.expense_management.entity.Trip;
+import com.travel.expense_management.entity.TripStatus;
 import com.travel.expense_management.exception.BadRequestException;
 import com.travel.expense_management.exception.ResourceNotFoundException;
 import com.travel.expense_management.repository.ExpenseRepository;
@@ -40,6 +41,10 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Trip", tripId));
 
         authorizationService.authorizeTripAccess(trip, currentUser);
+
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot add expense to a trip that is already " + trip.getStatus());
+        }
         validateExpenseDate(request, trip);
 
         Expense expense = Expense.builder()
@@ -86,6 +91,10 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         Trip trip = expense.getTrip();
         authorizationService.authorizeTripAccess(trip, currentUser);
+
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot update expense for a trip that is already " + trip.getStatus());
+        }
         validateExpenseDate(request, trip);
 
         expense.setDescription(request.description());
@@ -103,6 +112,10 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Expense", id));
 
         authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getTrip().getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot delete expense for a trip that is already " + expense.getTrip().getStatus());
+        }
 
         expenseRepository.delete(expense);
     }
@@ -122,6 +135,10 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Expense", expenseId));
 
         authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getTrip().getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot upload receipt for a trip that is already " + expense.getTrip().getStatus());
+        }
 
         // Store new file first (runs validations)
         String uniqueFilename = receiptStorageService.storeFile(file);
@@ -205,6 +222,10 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Expense", expenseId));
 
         authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getTrip().getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot delete receipt for a trip that is already " + expense.getTrip().getStatus());
+        }
 
         if (expense.getReceipt() == null) {
             throw new BadRequestException("Expense with ID " + expenseId + " does not have a receipt.");
