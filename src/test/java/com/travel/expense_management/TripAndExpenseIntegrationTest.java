@@ -9,6 +9,7 @@ import com.travel.expense_management.entity.ExpenseCategory;
 import com.travel.expense_management.entity.Role;
 import com.travel.expense_management.entity.User;
 import com.travel.expense_management.repository.ExpenseRepository;
+import com.travel.expense_management.entity.TripStatus;
 import com.travel.expense_management.repository.TripRepository;
 import com.travel.expense_management.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -195,6 +196,106 @@ public class TripAndExpenseIntegrationTest {
                         .header("Authorization", "Bearer " + emp1Token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidTripJson))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldManageApprovalWorkflowCorrectly() throws Exception {
+        // 1. Register Employee
+        RegisterRequest regEmp = new RegisterRequest("Employee Workflow", "workflow_emp@example.com", "password123");
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regEmp)))
+                .andExpect(status().isCreated());
+
+        String empToken = obtainToken("workflow_emp@example.com", "password123");
+
+        // 2. Create Trip (Should start as PENDING)
+        String tripRequestJson = String.format(
+                "{\"destination\":\"London\",\"startDate\":\"%s\",\"endDate\":\"%s\",\"budget\":2000.00,\"description\":\"Business trip to London\"}",
+                LocalDate.now().plusDays(2),
+                LocalDate.now().plusDays(8)
+        );
+
+        String tripResponseString = mockMvc.perform(post("/trips")
+                        .header("Authorization", "Bearer " + empToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tripRequestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+
+        Integer tripIdInt = com.jayway.jsonpath.JsonPath.read(tripResponseString, "$.id");
+        Long tripId = tripIdInt.longValue();
+
+        // 3. Employee tries to approve their own trip -> Should be Forbidden
+        mockMvc.perform(put("/trips/" + tripId + "/approve")
+                        .header("Authorization", "Bearer " + empToken))
+                .andExpect(status().isForbidden());
+
+        // 4. Create Manager User
+        User manager = User.builder()
+                .fullName("Manager User")
+                .email("manager@example.com")
+                .password(passwordEncoder.encode("managerpass"))
+                .role(Role.Manager)
+                .build();
+        userRepository.save(manager);
+
+        String managerToken = obtainToken("manager@example.com", "managerpass");
+
+        // 5. Manager approves the trip -> Should be OK
+        mockMvc.perform(put("/trips/" + tripId + "/approve")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        // 6. Employee tries to update the approved trip -> Should be Bad Request
+        mockMvc.perform(put("/trips/" + tripId)
+                        .header("Authorization", "Bearer " + empToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tripRequestJson))
+                .andExpect(status().isBadRequest());
+
+        // 7. Employee tries to delete the approved trip -> Should be Bad Request
+        mockMvc.perform(delete("/trips/" + tripId)
+                        .header("Authorization", "Bearer " + empToken))
+                .andExpect(status().isBadRequest());
+
+        // 8. Employee tries to add an expense to the approved trip -> Should be Bad Request
+        String expenseRequestJson = String.format(
+                "{\"description\":\"Flight Ticket\",\"amount\":500.00,\"category\":\"TRANSPORT\",\"date\":\"%s\"}",
+                LocalDate.now().plusDays(3)
+        );
+        mockMvc.perform(post("/trips/" + tripId + "/expenses")
+                        .header("Authorization", "Bearer " + empToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(expenseRequestJson))
+                .andExpect(status().isBadRequest());
+
+        // 9. Create another Trip to test REJECTED status
+        String trip2ResponseString = mockMvc.perform(post("/trips")
+                        .header("Authorization", "Bearer " + empToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tripRequestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+
+        Integer tripIdInt2 = com.jayway.jsonpath.JsonPath.read(trip2ResponseString, "$.id");
+        Long tripId2 = tripIdInt2.longValue();
+
+        // 10. Manager rejects the trip -> Should be OK
+        mockMvc.perform(put("/trips/" + tripId2 + "/reject")
+                        .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+
+        // 11. Employee tries to update the rejected trip -> Should be Bad Request
+        mockMvc.perform(put("/trips/" + tripId2)
+                        .header("Authorization", "Bearer " + empToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tripRequestJson))
                 .andExpect(status().isBadRequest());
     }
 }

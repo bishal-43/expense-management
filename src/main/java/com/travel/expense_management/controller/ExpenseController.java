@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 import java.util.List;
 
 @RestController
@@ -64,5 +66,37 @@ public class ExpenseController {
     ) {
         expenseService.deleteExpense(id, currentUser);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/expenses/{id}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ExpenseResponse> uploadReceipt(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        ExpenseResponse response = expenseService.uploadReceipt(id, file, currentUser);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/expenses/{id}/receipt")
+    public ResponseEntity<byte[]> getReceipt(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        byte[] fileBytes = expenseService.getReceiptFile(id, currentUser);
+        String contentType = expenseService.getReceiptContentType(id, currentUser);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(fileBytes);
+    }
+
+    @DeleteMapping("/expenses/{id}/receipt")
+    public ResponseEntity<ExpenseResponse> deleteReceipt(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        ExpenseResponse response = expenseService.deleteReceipt(id, currentUser);
+        return ResponseEntity.ok(response);
     }
 }

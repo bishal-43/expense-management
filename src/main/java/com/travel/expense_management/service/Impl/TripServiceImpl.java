@@ -9,6 +9,7 @@ import com.travel.expense_management.exception.ResourceNotFoundException;
 import com.travel.expense_management.repository.TripRepository;
 import com.travel.expense_management.repository.UserRepository;
 import com.travel.expense_management.security.UserPrincipal;
+import com.travel.expense_management.entity.TripStatus;
 import com.travel.expense_management.service.AuthorizationService;
 import com.travel.expense_management.service.TripService;
 import lombok.RequiredArgsConstructor;
@@ -85,6 +86,10 @@ public class TripServiceImpl implements TripService {
 
         authorizationService.authorizeTripAccess(trip, currentUser);
 
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot update a trip that is already " + trip.getStatus());
+        }
+
         // Validate any existing expenses do not conflict with new dates
         boolean hasInvalidExpenses = trip.getExpenses().stream()
                 .anyMatch(expense -> expense.getDate().isBefore(request.startDate()) || expense.getDate().isAfter(request.endDate()));
@@ -109,7 +114,37 @@ public class TripServiceImpl implements TripService {
 
         authorizationService.authorizeTripAccess(trip, currentUser);
 
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot delete a trip that is already " + trip.getStatus());
+        }
+
         tripRepository.delete(trip);
+    }
+
+    @Override
+    public TripResponse approveTrip(Long id, UserPrincipal currentUser) {
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip", id));
+        authorizationService.authorizeTripApproval(currentUser);
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Only PENDING trips can be approved. Current status: " + trip.getStatus());
+        }
+        trip.setStatus(TripStatus.APPROVED);
+        Trip updatedTrip = tripRepository.save(trip);
+        return TripResponse.from(updatedTrip);
+    }
+
+    @Override
+    public TripResponse rejectTrip(Long id, UserPrincipal currentUser) {
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Trip", id));
+        authorizationService.authorizeTripApproval(currentUser);
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Only PENDING trips can be rejected. Current status: " + trip.getStatus());
+        }
+        trip.setStatus(TripStatus.REJECTED);
+        Trip updatedTrip = tripRepository.save(trip);
+        return TripResponse.from(updatedTrip);
     }
 
     private void validateTripDates(TripRequest request) {

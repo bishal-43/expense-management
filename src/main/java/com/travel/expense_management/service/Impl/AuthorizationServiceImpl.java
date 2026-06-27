@@ -32,4 +32,13 @@ public class AuthorizationServiceImpl implements AuthorizationService {
             throw new AccessDeniedException("Access denied: You do not have permission to access resources for user ID " + userId);
         }
     }
+
+    @Override
+    public void authorizeTripApproval(UserPrincipal currentUser) {
+        boolean hasPrivilegedRole = currentUser.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_Admin") || auth.getAuthority().equals("ROLE_Manager"));
+        if (!hasPrivilegedRole) {
+            throw new AccessDeniedException("Access denied: Only Managers and Admins can approve or reject trips.");
+        }
+    }
 }

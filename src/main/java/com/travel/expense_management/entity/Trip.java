@@ -41,6 +41,11 @@ public class Trip extends BaseEntity {
     private User user;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TripStatus status = TripStatus.PENDING;
+
+    @Builder.Default
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Expense> expenses = new ArrayList<>();
 }

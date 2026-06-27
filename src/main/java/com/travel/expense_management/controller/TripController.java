@@ -64,4 +64,22 @@ public class TripController {
         tripService.deleteTrip(id, currentUser);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<TripResponse> approveTrip(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        TripResponse response = tripService.approveTrip(id, currentUser);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<TripResponse> rejectTrip(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        TripResponse response = tripService.rejectTrip(id, currentUser);
+        return ResponseEntity.ok(response);
+    }
 }

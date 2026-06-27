@@ -4,6 +4,7 @@ import com.travel.expense_management.dto.expense.ExpenseRequest;
 import com.travel.expense_management.dto.expense.ExpenseResponse;
 import com.travel.expense_management.entity.Expense;
 import com.travel.expense_management.entity.Trip;
+import com.travel.expense_management.entity.TripStatus;
 import com.travel.expense_management.exception.BadRequestException;
 import com.travel.expense_management.exception.ResourceNotFoundException;
 import com.travel.expense_management.repository.ExpenseRepository;
@@ -14,6 +15,11 @@ import com.travel.expense_management.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import com.travel.expense_management.dto.expense.OcrResult;
+import com.travel.expense_management.entity.Receipt;
+import com.travel.expense_management.service.OcrService;
+import com.travel.expense_management.service.ReceiptStorageService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,6 +32,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final TripRepository tripRepository;
     private final AuthorizationService authorizationService;
+    private final ReceiptStorageService receiptStorageService;
+    private final OcrService ocrService;
 
     @Override
     public ExpenseResponse createExpense(Long tripId, ExpenseRequest request, UserPrincipal currentUser) {
@@ -33,6 +41,10 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Trip", tripId));
 
         authorizationService.authorizeTripAccess(trip, currentUser);
+
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot add expense to a trip that is already " + trip.getStatus());
+        }
         validateExpenseDate(request, trip);
 
         Expense expense = Expense.builder()
@@ -79,6 +91,10 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         Trip trip = expense.getTrip();
         authorizationService.authorizeTripAccess(trip, currentUser);
+
+        if (trip.getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot update expense for a trip that is already " + trip.getStatus());
+        }
         validateExpenseDate(request, trip);
 
         expense.setDescription(request.description());
@@ -97,6 +113,10 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
 
+        if (expense.getTrip().getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot delete expense for a trip that is already " + expense.getTrip().getStatus());
+        }
+
         expenseRepository.delete(expense);
     }
 
@@ -107,5 +127,114 @@ public class ExpenseServiceImpl implements ExpenseService {
                     request.date(), trip.getStartDate(), trip.getEndDate()
             ));
         }
+    }
+
+    @Override
+    public ExpenseResponse uploadReceipt(Long expenseId, MultipartFile file, UserPrincipal currentUser) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense", expenseId));
+
+        authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getTrip().getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot upload receipt for a trip that is already " + expense.getTrip().getStatus());
+        }
+
+        // Store new file first (runs validations)
+        String uniqueFilename = receiptStorageService.storeFile(file);
+
+        // If storing the new file succeeded, we can safely delete the old physical file
+        if (expense.getReceipt() != null) {
+            receiptStorageService.deleteFile(expense.getReceipt().getFilePath());
+        }
+
+        // Build Receipt entity
+        Receipt receipt = Receipt.builder()
+                .fileName(file.getOriginalFilename())
+                .filePath(uniqueFilename)
+                .contentType(file.getContentType())
+                .fileSize(file.getSize())
+                .build();
+
+        expense.setReceipt(receipt);
+
+        // Trigger OCR analysis to autofill/update expense fields
+        try {
+            OcrResult ocrResult = ocrService.extractReceiptData(file);
+            if (ocrResult != null) {
+                if (ocrResult.description() != null && !ocrResult.description().isBlank()) {
+                    expense.setDescription(ocrResult.description());
+                }
+                if (ocrResult.amount() != null) {
+                    expense.setAmount(ocrResult.amount());
+                }
+                if (ocrResult.category() != null) {
+                    expense.setCategory(ocrResult.category());
+                }
+                if (ocrResult.date() != null) {
+                    if (!ocrResult.date().isBefore(expense.getTrip().getStartDate()) &&
+                        !ocrResult.date().isAfter(expense.getTrip().getEndDate())) {
+                        expense.setDate(ocrResult.date());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Suppress OCR errors for resiliency
+        }
+
+        Expense savedExpense = expenseRepository.save(expense);
+        return ExpenseResponse.from(savedExpense);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] getReceiptFile(Long expenseId, UserPrincipal currentUser) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense", expenseId));
+
+        authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getReceipt() == null) {
+            throw new BadRequestException("Expense with ID " + expenseId + " does not have a receipt.");
+        }
+
+        return receiptStorageService.loadFile(expense.getReceipt().getFilePath());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getReceiptContentType(Long expenseId, UserPrincipal currentUser) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense", expenseId));
+
+        authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getReceipt() == null) {
+            throw new BadRequestException("Expense with ID " + expenseId + " does not have a receipt.");
+        }
+
+        return expense.getReceipt().getContentType();
+    }
+
+    @Override
+    public ExpenseResponse deleteReceipt(Long expenseId, UserPrincipal currentUser) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense", expenseId));
+
+        authorizationService.authorizeTripAccess(expense.getTrip(), currentUser);
+
+        if (expense.getTrip().getStatus() != TripStatus.PENDING) {
+            throw new BadRequestException("Cannot delete receipt for a trip that is already " + expense.getTrip().getStatus());
+        }
+
+        if (expense.getReceipt() == null) {
+            throw new BadRequestException("Expense with ID " + expenseId + " does not have a receipt.");
+        }
+
+        receiptStorageService.deleteFile(expense.getReceipt().getFilePath());
+        expense.setReceipt(null);
+
+        Expense savedExpense = expenseRepository.save(expense);
+        return ExpenseResponse.from(savedExpense);
     }
 }

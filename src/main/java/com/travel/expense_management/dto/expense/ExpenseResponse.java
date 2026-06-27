@@ -14,6 +14,8 @@ public record ExpenseResponse(
         ExpenseCategory category,
         LocalDate date,
         Long tripId,
+        Long receiptId,
+        String receiptFileName,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -25,6 +27,8 @@ public record ExpenseResponse(
                 expense.getCategory(),
                 expense.getDate(),
                 expense.getTrip().getId(),
+                expense.getReceipt() != null ? expense.getReceipt().getId() : null,
+                expense.getReceipt() != null ? expense.getReceipt().getFileName() : null,
                 expense.getCreatedAt(),
                 expense.getUpdatedAt()
         );
