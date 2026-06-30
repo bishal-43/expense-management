@@ -1,0 +1,35 @@
+# Ignore target build directories
+target/
+build/
+
+# Ignore IDE configuration files and folder
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Ignore local directories created during development
+tessdata/
+uploads/
+
+# Ignore version control files
+.git/
+.gitignore
+
+# Ignore Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore Maven wrapper files (since build image provides its own Maven)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Ignore documentation files
+HELP.md

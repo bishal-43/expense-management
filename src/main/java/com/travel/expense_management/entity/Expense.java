@@ -39,4 +39,11 @@ public class Expense extends BaseEntity {
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JoinColumn(name = "receipt_id")
     private Receipt receipt;
+
+    @Column(name = "is_policy_violated", nullable = false)
+    @Builder.Default
+    private boolean isPolicyViolated = false;
+
+    @Column(name = "policy_violation_message", length = 500)
+    private String policyViolationMessage;
 }

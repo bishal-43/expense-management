@@ -84,11 +84,19 @@ public class AuthServiceImpl implements AuthService {
 
 
     private User buildUser(RegisterRequest request){
+        Role assignedRole = Role.Employee;
+        if (request.role() != null && !request.role().isBlank()) {
+            try {
+                assignedRole = Role.valueOf(request.role());
+            } catch (IllegalArgumentException e) {
+                // Fallback to Employee
+            }
+        }
         return User.builder()
                 .fullName(request.fullname())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .role(Role.Employee)
+                .role(assignedRole)
                 .build();
     }
 }

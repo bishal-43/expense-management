@@ -17,7 +17,9 @@ public record ExpenseResponse(
         Long receiptId,
         String receiptFileName,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        boolean isPolicyViolated,
+        String policyViolationMessage
 ) {
     public static ExpenseResponse from(Expense expense) {
         return new ExpenseResponse(
@@ -30,7 +32,9 @@ public record ExpenseResponse(
                 expense.getReceipt() != null ? expense.getReceipt().getId() : null,
                 expense.getReceipt() != null ? expense.getReceipt().getFileName() : null,
                 expense.getCreatedAt(),
-                expense.getUpdatedAt()
+                expense.getUpdatedAt(),
+                expense.isPolicyViolated(),
+                expense.getPolicyViolationMessage()
         );
     }
 }

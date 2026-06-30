@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: expense-db
+    environment:
+      POSTGRES_DB: expenseDB
+      POSTGRES_USER: postgres
+      # Escape $ as $$ in docker-compose.yml to avoid shell environment expansion
+      POSTGRES_PASSWORD: bishal$$980091
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d expenseDB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: expense-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://db:5432/expenseDB
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=bishal$$980091
+      - JWT_SECRET=Project_Expense_Management_Postgres_Java_Spring_Docker_Secret_Key_2026_Unique_Large_Secret
+      - JWT_EXPIRATION=86400000
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - uploads:/app/uploads
+      - tessdata:/app/tessdata
+
+volumes:
+  pgdata:
+  uploads:
+  tessdata:

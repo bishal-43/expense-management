@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VentureSpend - Premium Corporate Travel & Expense Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- External Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+
+    <!-- Toast Banner -->
+    <div id="toast-banner" class="toast">
+        <i id="toast-icon" class="fa-solid"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- AUTHENTICATION CONTAINER -->
+    <div id="auth-screen">
+        <div class="auth-container glass-card">
+            <div class="logo-header">
+                <i class="fa-solid fa-receipt"></i>
+                <h1>VentureSpend</h1>
+            </div>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" class="form-input" placeholder="name@company.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <div class="password-container">
+                        <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required style="padding-right: 48px;">
+                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('login-password', 'login-pwd-icon')">
+                            <i id="login-pwd-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn">
+                    <span>Sign In</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" style="display: none;" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" class="form-input" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" class="form-input" placeholder="name@company.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <div class="password-container">
+                        <input type="password" id="reg-password" class="form-input" placeholder="Minimum 6 characters" required style="padding-right: 48px;">
+                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('reg-password', 'reg-pwd-icon')">
+                            <i id="reg-pwd-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reg-role">Account Role</label>
+                    <select id="reg-role" class="form-input form-select" required>
+                        <option value="Employee">Employee</option>
+                        <option value="Manager">Manager (Approver)</option>
+                        <option value="Admin">Admin (Full Access)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <span>Create Account</span>
+                    <i class="fa-solid fa-user-plus"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN (SIDEBAR + CONTENT WORKSPACE) -->
+    <div id="app-screen" style="display: none; width: 100%;">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar">
+            <div>
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-receipt"></i>
+                    <h2>VentureSpend</h2>
+                </div>
+                <ul class="sidebar-nav">
+                    <li class="nav-item active" id="nav-dashboard">
+                        <a onclick="navigateTo('dashboard')">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-trips">
+                        <a onclick="navigateTo('trips')">
+                            <i class="fa-solid fa-plane-departure"></i>
+                            <span>Trips & Claims</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-reports">
+                        <a onclick="navigateTo('reports')">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Analytics Reports</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-notifications">
+                        <a onclick="navigateTo('notifications')">
+                            <i class="fa-solid fa-bell"></i>
+                            <span>Notifications</span>
+                            <span class="badge" id="unread-notif-badge" style="display: none;">0</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div>
+                <div class="sidebar-profile">
+                    <div class="profile-avatar" id="user-avatar-initials">US</div>
+                    <div class="profile-info">
+                        <h4 id="user-display-name">Loading...</h4>
+                        <span id="user-display-role">Loading...</span>
+                    </div>
+                    <button onclick="handleLogout()" style="background:transparent; border:none; color:var(--danger); cursor:pointer; margin-left:auto; font-size:1.1rem;" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main id="main-workspace">
+            <div class="workspace-header">
+                <div class="workspace-title">
+                    <h2 id="workspace-title-text">Corporate Dashboard</h2>
+                    <p id="workspace-subtitle-text">Welcome back to your corporate expense terminal.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="refreshData()" style="width: auto; padding: 10px 16px;">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                    <button class="btn" id="create-trip-quick-btn" onclick="openCreateTripModal()" style="width: auto; padding: 10px 20px;">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>New Trip</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- DASHBOARD TAB CONTENT -->
+            <section id="content-dashboard" class="tab-content active">
+                <div class="metrics-grid" id="metrics-container">
+                    <!-- Dynamic Metrics Rendered via JS -->
+                </div>
+                
+                <div class="details-grid">
+                    <div class="glass-card" style="padding: 24px;">
+                        <h3 style="font-size: 1.1rem; font-weight:600; margin-bottom:15px;">Active / Pending Approval Trips</h3>
+                        <div id="dashboard-trips-list" class="trips-list">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="padding: 24px; display:flex; flex-direction:column; gap:16px;">
+                        <h3 style="font-size: 1.1rem; font-weight:600;">System Actions</h3>
+                        <p style="font-size: 0.85rem; color:var(--text-muted);">Manage requests, upload receipts with built-in OCR support, and analyze spend metrics.</p>
+                        <button class="btn btn-secondary" onclick="navigateTo('reports')">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <span>View Reports Panel</span>
+                        </button>
+                        <button class="btn" onclick="navigateTo('trips')">
+                            <i class="fa-solid fa-plane-departure"></i>
+                            <span>Access All Trips</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TRIPS TAB CONTENT -->
+            <section id="content-trips" class="tab-content">
+                <div id="trips-main-view">
+                    <div class="trips-section-header">
+                        <h3>Your Travel Requests</h3>
+                        <button class="btn" onclick="openCreateTripModal()" style="width: auto; padding: 10px 18px;">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>Create Request</span>
+                        </button>
+                    </div>
+                    <div class="trips-list" id="trips-container">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Trip Details and Expenses Sub-view -->
+                <div id="trip-details-view" style="display: none;">
+                    <button class="btn btn-secondary" onclick="backToTrips()" style="width: auto; padding: 10px 16px; margin-bottom: 20px;">
+                        <i class="fa-solid fa-arrow-left-long"></i>
+                        <span>Back to All Trips</span>
+                    </button>
+                    
+                    <div class="details-grid">
+                        <div class="glass-card expenses-card">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3 id="detail-trip-title">Paris Summer Trip</h3>
+                                <button class="btn" id="add-expense-btn" onclick="openAddExpenseModal()" style="width: auto; padding: 10px 16px;">
+                                    <i class="fa-solid fa-plus"></i>
+                                    <span>Add Expense</span>
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th>Date</th>
+                                            <th>Receipt</th>
+                                            <th>Amount</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenses-table-body">
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="glass-card" style="padding: 24px; display:flex; flex-direction:column; gap:16px;">
+                            <h3 style="font-size: 1.1rem; font-weight:600;">Trip Meta</h3>
+                            <div style="display:flex; flex-direction:column; gap:12px; font-size:0.9rem;">
+                                <div>
+                                    <span style="color:var(--text-muted);">Destination</span>
+                                    <p id="meta-trip-destination" style="font-weight:600; margin-top:2px;">-</p>
+                                </div>
+                                <div id="meta-trip-requester-container">
+                                    <span style="color:var(--text-muted);">Requested By</span>
+                                    <p id="meta-trip-requester" style="font-weight:600; margin-top:2px;">-</p>
+                                </div>
+                                <div>
+                                    <span style="color:var(--text-muted);">Duration</span>
+                                    <p id="meta-trip-dates" style="font-weight:600; margin-top:2px;">-</p>
+                                </div>
+                                <div>
+                                    <span style="color:var(--text-muted);">Budget Limit</span>
+                                    <p id="meta-trip-budget" style="font-weight:600; margin-top:2px;">-</p>
+                                </div>
+                                <div>
+                                    <span style="color:var(--text-muted);">Total Spent</span>
+                                    <p id="meta-trip-spent" style="font-weight:600; margin-top:2px;">-</p>
+                                </div>
+                                <div>
+                                    <span style="color:var(--text-muted);">Status</span>
+                                    <div id="meta-trip-status" style="margin-top:6px;">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ANALYTICS REPORTS TAB CONTENT -->
+            <section id="content-reports" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Expense Analytics</h3>
+                    <button class="btn btn-secondary" onclick="downloadCsv()" style="width: auto; padding: 10px 20px;">
+                        <i class="fa-solid fa-file-csv"></i>
+                        <span>Export CSV Summary</span>
+                    </button>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="glass-card chart-card">
+                        <h3>Distribution by Expense Category</h3>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-card chart-card">
+                        <h3>Spend Breakdown by Trip Destination</h3>
+                        <div class="chart-container">
+                            <canvas id="tripChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NOTIFICATIONS TAB CONTENT -->
+            <section id="content-notifications" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Notifications Center</h3>
+                    <button class="btn btn-secondary" onclick="markAllNotificationsAsRead()" style="width: auto; padding: 10px 16px;">
+                        <i class="fa-solid fa-envelope-open"></i>
+                        <span>Mark All as Read</span>
+                    </button>
+                </div>
+                <div class="notification-list" id="notifications-container">
+                    <!-- Notifications Rendered dynamically -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: CREATE TRIP -->
+    <div class="modal-overlay" id="modal-create-trip">
+        <div class="modal-card glass-card">
+            <div class="modal-header">
+                <h3>Create New Trip Request</h3>
+                <button class="modal-close" onclick="closeCreateTripModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleCreateTrip(event)">
+                <div class="form-group">
+                    <label for="trip-destination">Destination</label>
+                    <input type="text" id="trip-destination" class="form-input" placeholder="e.g. Paris, France" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div class="form-group">
+                        <label for="trip-start-date">Start Date</label>
+                        <input type="date" id="trip-start-date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="trip-end-date">End Date</label>
+                        <input type="date" id="trip-end-date" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="trip-budget">Budget Limit (₹)</label>
+                    <input type="number" step="0.01" id="trip-budget" class="form-input" placeholder="e.g. 150000.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="trip-description">Description</label>
+                    <input type="text" id="trip-description" class="form-input" placeholder="Purpose of this travel">
+                </div>
+                <button type="submit" class="btn">Submit Travel Request</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD EXPENSE & OCR ATTACHMENT -->
+    <div class="modal-overlay" id="modal-add-expense">
+        <div class="modal-card glass-card">
+            <div class="modal-header">
+                <h3>Add Expense Claim</h3>
+                <button class="modal-close" onclick="closeAddExpenseModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddExpense(event)">
+                <div class="form-group">
+                    <label for="exp-description">Description</label>
+                    <input type="text" id="exp-description" class="form-input" placeholder="e.g. Flight ticket booking" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div class="form-group">
+                        <label for="exp-amount">Amount (₹)</label>
+                        <input type="number" step="0.01" id="exp-amount" class="form-input" placeholder="e.g. 2500.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="exp-category">Category</label>
+                        <select id="exp-category" class="form-input form-select" required>
+                            <option value="FOOD">Food & Beverage</option>
+                            <option value="LODGING">Lodging & Hotel</option>
+                            <option value="TRANSPORT">Transportation</option>
+                            <option value="ACTIVITIES">Activities</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="exp-date">Expense Date</label>
+                    <input type="date" id="exp-date" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Receipt File (Enables Mock OCR autofill)</label>
+                    <div class="receipt-preview" id="receipt-preview-area" onclick="triggerFileInput()">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color:var(--primary); margin-bottom:8px;"></i>
+                        <p id="receipt-upload-text">Click to upload receipt image (JPEG, PNG)</p>
+                        <input type="file" id="receipt-file-input" style="display: none;" accept="image/jpeg,image/png,image/gif" onchange="previewAndOcrFile(event)">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">Create Claim</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP WORKFLOW -->
+    <script type="module" src="js/main.js?v=3"></script>
+</body>
+</html>

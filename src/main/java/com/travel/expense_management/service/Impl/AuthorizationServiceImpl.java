@@ -22,6 +22,13 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     @Override
+    public void authorizeTripWrite(Trip trip, UserPrincipal currentUser) {
+        if (!currentUser.getId().equals(trip.getUser().getId())) {
+            throw new AccessDeniedException("Access denied: Only the owner of the trip can modify its details or expenses.");
+        }
+    }
+
+    @Override
     public void authorizeUserAccess(Long userId, UserPrincipal currentUser) {
         if (currentUser.getId().equals(userId)) {
             return;
