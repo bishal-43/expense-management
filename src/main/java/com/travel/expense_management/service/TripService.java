@@ -21,4 +21,6 @@ public interface TripService {
     TripResponse approveTrip(Long id, UserPrincipal currentUser);
 
     TripResponse rejectTrip(Long id, UserPrincipal currentUser);
+
+    TripResponse reimburseTrip(Long id, UserPrincipal currentUser);
 }

@@ -53,6 +53,9 @@ public class TripAndExpenseIntegrationTest {
     private ExpenseRepository expenseRepository;
 
     @Autowired
+    private com.travel.expense_management.repository.NotificationRepository notificationRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
@@ -60,6 +63,7 @@ public class TripAndExpenseIntegrationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
                 .build();
+        notificationRepository.deleteAll();
         expenseRepository.deleteAll();
         tripRepository.deleteAll();
         userRepository.deleteAll();

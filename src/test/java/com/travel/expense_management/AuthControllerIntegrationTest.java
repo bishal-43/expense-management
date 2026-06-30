@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travel.expense_management.dto.auth.LoginRequest;
 import com.travel.expense_management.dto.auth.RegisterRequest;
 import com.travel.expense_management.repository.UserRepository;
+import com.travel.expense_management.repository.TripRepository;
+import com.travel.expense_management.repository.ExpenseRepository;
+import com.travel.expense_management.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,11 +37,23 @@ public class AuthControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TripRepository tripRepository;
+
+    @Autowired
+    private ExpenseRepository expenseRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
                 .build();
+        notificationRepository.deleteAll();
+        expenseRepository.deleteAll();
+        tripRepository.deleteAll();
         userRepository.deleteAll();
     }
 

@@ -32,6 +32,7 @@ public class JwtService {
                 .subject(user.getUsername())
                 .issuedAt(now)
                 .expiration(expiry)
+                .claim("userId", user.getId())
                 .claim("role", user.getAuthorities()
                         .stream()
                         .findFirst()

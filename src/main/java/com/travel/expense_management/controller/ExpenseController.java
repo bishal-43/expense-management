@@ -4,6 +4,8 @@ import com.travel.expense_management.dto.expense.ExpenseRequest;
 import com.travel.expense_management.dto.expense.ExpenseResponse;
 import com.travel.expense_management.security.UserPrincipal;
 import com.travel.expense_management.service.ExpenseService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,11 +19,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Expenses", description = "Endpoints for managing expenses within trips")
 public class ExpenseController {
 
     private final ExpenseService expenseService;
 
     @PostMapping("/trips/{tripId}/expenses")
+    @Operation(summary = "Create an expense for a trip", description = "Creates a new expense report associated with a specific trip ID")
     public ResponseEntity<ExpenseResponse> createExpense(
             @PathVariable Long tripId,
             @Valid @RequestBody ExpenseRequest request,
@@ -32,6 +36,7 @@ public class ExpenseController {
     }
 
     @GetMapping("/trips/{tripId}/expenses")
+    @Operation(summary = "Get all expenses for a trip", description = "Retrieves all expenses reported for a specific trip")
     public ResponseEntity<List<ExpenseResponse>> getExpensesForTrip(
             @PathVariable Long tripId,
             @AuthenticationPrincipal UserPrincipal currentUser
@@ -41,6 +46,7 @@ public class ExpenseController {
     }
 
     @GetMapping("/expenses/{id}")
+    @Operation(summary = "Get expense by ID", description = "Retrieves a specific expense record by its ID")
     public ResponseEntity<ExpenseResponse> getExpenseById(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser
@@ -50,6 +56,7 @@ public class ExpenseController {
     }
 
     @PutMapping("/expenses/{id}")
+    @Operation(summary = "Update an expense", description = "Updates details of an existing expense record")
     public ResponseEntity<ExpenseResponse> updateExpense(
             @PathVariable Long id,
             @Valid @RequestBody ExpenseRequest request,
@@ -60,6 +67,7 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/expenses/{id}")
+    @Operation(summary = "Delete an expense", description = "Deletes an existing expense record")
     public ResponseEntity<Void> deleteExpense(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser
@@ -69,6 +77,7 @@ public class ExpenseController {
     }
 
     @PostMapping(value = "/expenses/{id}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload a receipt image for an expense", description = "Uploads a receipt document (image/PDF) for the specified expense, triggering OCR processing")
     public ResponseEntity<ExpenseResponse> uploadReceipt(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
@@ -79,6 +88,7 @@ public class ExpenseController {
     }
 
     @GetMapping("/expenses/{id}/receipt")
+    @Operation(summary = "Download receipt for an expense", description = "Retrieves/downloads the uploaded receipt file/image associated with the expense")
     public ResponseEntity<byte[]> getReceipt(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser
@@ -92,6 +102,7 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/expenses/{id}/receipt")
+    @Operation(summary = "Delete receipt from an expense", description = "Deletes/removes the uploaded receipt associated with the expense")
     public ResponseEntity<ExpenseResponse> deleteReceipt(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser

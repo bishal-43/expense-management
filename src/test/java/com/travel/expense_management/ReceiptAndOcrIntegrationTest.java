@@ -49,6 +49,9 @@ public class ReceiptAndOcrIntegrationTest {
     private ExpenseRepository expenseRepository;
 
     @Autowired
+    private com.travel.expense_management.repository.NotificationRepository notificationRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
@@ -56,6 +59,7 @@ public class ReceiptAndOcrIntegrationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
                 .build();
+        notificationRepository.deleteAll();
         expenseRepository.deleteAll();
         tripRepository.deleteAll();
         userRepository.deleteAll();
@@ -198,5 +202,42 @@ public class ReceiptAndOcrIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.receiptId").value((Object) null))
                 .andExpect(jsonPath("$.receiptFileName").value((Object) null));
+    }
+
+    @Autowired
+    private com.travel.expense_management.service.OcrService ocrService;
+
+    @Test
+    void shouldPerformRealOcrOnValidImage() throws Exception {
+        // Create an in-memory receipt image with text
+        java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(400, 150, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g2d = image.createGraphics();
+        g2d.setColor(java.awt.Color.WHITE);
+        g2d.fillRect(0, 0, 400, 150);
+        g2d.setColor(java.awt.Color.BLACK);
+        g2d.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
+        g2d.drawString("Starbucks Coffee", 20, 40);
+        g2d.drawString("Date: 2026-06-27", 20, 70);
+        g2d.drawString("Total: $12.50", 20, 100);
+        g2d.dispose();
+
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", baos);
+        byte[] imageBytes = baos.toByteArray();
+
+        org.springframework.mock.web.MockMultipartFile realReceiptFile = new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "receipt.png",
+                "image/png",
+                imageBytes
+            );
+
+        com.travel.expense_management.dto.expense.OcrResult result = ocrService.extractReceiptData(realReceiptFile);
+
+        org.junit.jupiter.api.Assertions.assertNotNull(result);
+        org.junit.jupiter.api.Assertions.assertEquals(new java.math.BigDecimal("12.50"), result.amount());
+        org.junit.jupiter.api.Assertions.assertEquals(com.travel.expense_management.entity.ExpenseCategory.FOOD, result.category());
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(2026, 6, 27), result.date());
+        org.junit.jupiter.api.Assertions.assertTrue(result.description().contains("Starbucks"));
     }
 }

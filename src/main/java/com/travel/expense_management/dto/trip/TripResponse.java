@@ -15,6 +15,7 @@ public record TripResponse(
         BigDecimal budget,
         String description,
         Long userId,
+        String employeeName,
         TripStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -28,6 +29,7 @@ public record TripResponse(
                 trip.getBudget(),
                 trip.getDescription(),
                 trip.getUser().getId(),
+                trip.getUser().getFullName(),
                 trip.getStatus(),
                 trip.getCreatedAt(),
                 trip.getUpdatedAt()
